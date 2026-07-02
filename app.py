@@ -82,12 +82,25 @@ class ImagePlan:
 
 
 @dataclass
+class SellingPoint:
+    name: str
+    user_pain: str
+    expression_direction: str
+    needs_evidence: str
+    suitable_styles: list[str]
+    point_type: str
+
+
+@dataclass
 class GroupOutput:
     group_no: int
     style_id: str
     style_name: str
     style_position: str
     difference_anchor: str
+    main_selling_point: str
+    cover_direction: str
+    main_scene: str
     modules: list[str]
     images: list[ImagePlan]
     alt_titles: list[str]
@@ -101,6 +114,8 @@ class GenerationResult:
     created_at: str
     uploaded_images: list[UploadedImage]
     product: ProductInput
+    selling_point_library: list[SellingPoint]
+    core_selling_points_selected: list[SellingPoint]
     selected_styles: list[dict[str, str]]
     groups: list[GroupOutput]
     markdown: str
@@ -203,13 +218,23 @@ def infer_category(product: ProductInput) -> str:
     if product.category:
         return product.category
     text = f"{product.product_name} {' '.join(product.core_selling_points)}"
-    if any(k in text for k in ["凝珠", "洗衣", "衣物", "留香"]):
+    if "洗衣凝珠" in text or "凝珠" in text:
+        return "洗衣凝珠 / 衣物洗护"
+    if "洗衣机" in text and any(k in text for k in ["泡腾片", "清洁", "清洗"]):
+        return "洗衣机清洁"
+    if "留香珠" in text or "衣物香氛" in text:
+        return "衣物香氛 / 留香产品"
+    if "内衣" in text and any(k in text for k in ["洗衣液", "洗液", "清洗"]):
+        return "贴身衣物洗护"
+    if any(k in text for k in ["柔巾", "湿巾"]):
+        return "母婴清洁 / 日用消耗品"
+    if any(k in text for k in ["擦鞋", "鞋", "湿巾", "随身"]):
+        return "鞋履清洁 / 随身清洁"
+    if any(k in text for k in ["洗衣", "衣物", "留香"]):
         return "衣物洗护"
     if any(k in text for k in ["浴室", "厨房", "马桶", "清洁剂", "喷雾"]):
         return "家清清洁"
-    if any(k in text for k in ["鞋", "湿巾", "随身"]):
-        return "即时清洁"
-    return "日化/家清/生活清洁产品"
+    return "品类暂不确定，按日化/家清/生活清洁产品做接近推断"
 
 
 def infer_scene(product: ProductInput) -> str:
@@ -234,6 +259,75 @@ def infer_user(product: ProductInput) -> str:
     if any(k in text for k in ["香", "通勤", "女生"]):
         return "精致女生、通勤人群"
     return "有日常清洁和生活品质需求的人"
+
+
+def point(name: str, user_pain: str, expression: str, evidence: str, styles: list[str], point_type: str = "A类：通用体验卖点") -> SellingPoint:
+    return SellingPoint(name, user_pain, expression, evidence, styles, point_type)
+
+
+def build_selling_point_library(product: ProductInput) -> list[SellingPoint]:
+    category_text = f"{product.category} {product.product_name}"
+    if "洗衣凝珠" in category_text or "凝珠" in category_text:
+        points = [
+            point("一颗定量，减少倒洗衣液的麻烦", "不想每次倒洗衣液、估用量、弄脏瓶口", "懒人洗衣、省步骤、拿取顺手", "不需要", ["G01", "G03", "G08", "G10"]),
+            point("懒人洗衣更省步骤", "洗衣流程越多越容易拖延", "把洗衣动作讲得更轻、更少折腾", "不需要", ["G03", "G10", "G11"]),
+            point("香氛体验更适合日常穿着", "衣服洗完没有状态感，通勤前缺少干净气味", "衣柜淡香、穿上身清爽、靠近闻到的气味", "如写具体留香时长需要依据", ["G04", "G09", "G11", "G13", "G14"]),
+            point("高频洗护更适合常备", "家庭/宿舍衣物多，消耗快，临时没有会很麻烦", "常备、囤货、用得上、不闲置", "不需要；如写具体容量需要包装可见依据", ["G02", "G10", "G08"]),
+            point("小颗粒形态更好收纳", "洗护区空间小，大瓶容易占地方", "收纳更轻、拿取更顺、宿舍/租房友好", "不需要；不要编造规格", ["G08", "G10", "G12"]),
+            point("适合洗衣机日常洗护场景", "日常机洗频繁，不想每次复杂搭配", "洗衣机旁、阳台洗护、日常衣物统一处理", "不需要", ["G03", "G07", "G10"]),
+            point("衣服洗后清爽感更明显", "衣物闷味、汗味、洗后不够清爽会影响穿着", "洗后清爽、干净气味、穿上身舒服", "如果涉及除菌/除螨/具体去味数据需要依据", ["G04", "G11", "G13", "G14"]),
+            point("对租房党/学生党更友好", "小空间用品要少占地、好拿、别太复杂", "宿舍、出租屋、阳台小角落里的省心选择", "不需要", ["G03", "G08", "G10"]),
+            point("对不想手搓的人更友好", "污渍和汗味场景容易让人想手搓但又麻烦", "少手搓、少纠结、日常洗衣更轻松", "涉及具体清洁力结果需要依据或用体验表达", ["G01", "G07", "G03"]),
+            point("贴身衣物安心感内容方向", "贴身衣物更想选得稳一点，不想只看香味", "谨慎选择、日常安心、家人衣物也会多想一步", "如写婴童可用、敏感肌友好、无添加需要依据", ["G05", "G06", "G14"], "B类：需要依据支持的功效卖点"),
+            point("多场景衣物内容方向", "白T、毛巾、床品、通勤衣物需求不一样", "校服、白T、毛巾、床品分场景讲", "不需要；具体功效不要编造", ["G03", "G07", "G08"]),
+            point("通勤衣物气味管理", "出门前衣服气味会影响状态和自信", "通勤、衣柜、穿搭前的干净气味", "如写留香小时数需要依据", ["G09", "G11", "G13"]),
+        ]
+    elif any(k in category_text for k in ["鞋履", "随身", "擦鞋"]):
+        points = [
+            point("外出临时救场", "鞋面或局部脏污突然出现，很影响出门状态", "包里/车里/办公室随手处理", "不需要", ["G12", "G01", "G08"]),
+            point("局部清洁更省心", "不想为一点脏污整套清洗", "小范围处理、少折腾", "具体去污效果需要依据", ["G07", "G12"]),
+            point("携带和收纳方便", "随身用品太占地方就容易闲置", "小包、抽屉、玄关常备", "如写规格数量需要依据", ["G10", "G12"]),
+            point("通勤场景更自然", "上班上学路上容易遇到小状况", "通勤、约会、出门前状态管理", "不需要", ["G11", "G12"]),
+            point("新鞋维护意识", "鞋子刚买更在意干净状态", "鞋履护理、穿搭细节、得物购物后维护", "不需要", ["G08", "G13"]),
+            point("清爽体面感", "鞋面脏会拉低整体穿搭精致度", "局部干净、出门体面", "不需要", ["G09", "G11"]),
+            point("家门口常备", "出门前发现脏污最容易手忙脚乱", "玄关、鞋柜、包内常备", "不需要", ["G02", "G10"]),
+            point("材质适配提醒", "不同鞋面材质处理方式不同", "提醒先看材质、局部小范围试用", "需要包装或用户说明支持", ["G05", "G08"], "B类：需要依据支持的功效卖点"),
+        ]
+    else:
+        points = [
+            point("使用更省心", "日用品太复杂会降低使用频率", "少步骤、顺手、日常可坚持", "不需要", ["G01", "G03", "G10"]),
+            point("场景更贴近日常", "只讲功能容易像广告，用户难代入", "把产品放到真实家务/通勤/收纳场景", "不需要", ["G03", "G11", "G14"]),
+            point("适合高频使用", "常用产品最怕不顺手、占地方、难坚持", "高利用率、长期常备、不闲置", "不需要", ["G02", "G10"]),
+            point("使用步骤更简单", "复杂流程容易被放弃", "懒人友好、少折腾、行动成本低", "不需要", ["G03", "G08", "G10"]),
+            point("香气/清爽体验", "用完没有感受记忆点，种草不够鲜明", "干净气味、清爽感、生活氛围", "具体留香/去味数据需要依据", ["G04", "G09", "G13", "G14"]),
+            point("收纳/携带更方便", "空间有限时，大件或复杂包装容易闲置", "洗护区、玄关、包内、宿舍收纳", "如写具体规格需要依据", ["G08", "G10", "G12"]),
+            point("家庭常备更合适", "家里临时缺日用品很影响节奏", "家庭囤货、常备、多人使用场景", "不需要；如写婴童可用需要依据", ["G02", "G06", "G10"]),
+            point("用完体感更清爽", "清洁后仍有黏腻、闷味或不舒服会劝退", "清爽、干净、舒服的使用后状态", "具体除菌/抑菌/除螨需要依据", ["G05", "G07", "G14"]),
+            point("安心选择内容方向", "贴身、母婴或家庭场景会让用户更谨慎", "谨慎选择、少点顾虑、日常放心", "婴童可用、敏感肌友好、无添加等必须有依据", ["G05", "G06"], "B类：需要依据支持的功效卖点"),
+        ]
+    return points
+
+
+def select_core_selling_points(product: ProductInput, library: list[SellingPoint]) -> list[SellingPoint]:
+    if product.core_selling_points:
+        user_points = [
+            point(item, "用户主动补充的产品重点", f"围绕“{item}”做场景化种草表达", "按用户补充使用；涉及具体数据仍需依据", ["G01", "G03", "G08", "G10"])
+            for item in product.core_selling_points
+        ]
+        return unique_selling_points([*user_points, *library])[:8]
+    preferred_styles = {"G01", "G03", "G04", "G08", "G10", "G11", "G13", "G14"}
+    sorted_points = sorted(library, key=lambda item: len(preferred_styles.intersection(item.suitable_styles)), reverse=True)
+    return sorted_points[:8]
+
+
+def unique_selling_points(points: Iterable[SellingPoint]) -> list[SellingPoint]:
+    seen: set[str] = set()
+    result: list[SellingPoint] = []
+    for item in points:
+        if item.name not in seen:
+            seen.add(item.name)
+            result.append(item)
+    return result
 
 
 def normalize_product(raw: ProductInput) -> ProductInput:
@@ -269,13 +363,22 @@ def select_style_ids(product: ProductInput) -> list[str]:
 
     preferred = ["G01", "G03", "G04", "G08", "G10", "G05", "G09", "G02", "G07", "G11", "G13", "G06", "G12", "G14"]
     text = f"{product.category} {product.usage_scene} {' '.join(product.core_selling_points)}"
-    if any(k in text for k in ["宝宝", "婴童", "家庭"]):
+    if "洗衣凝珠" in text or "凝珠" in text:
+        preferred = ["G01", "G02", "G03", "G04", "G05", "G07", "G08", "G09", "G11", "G13", "G14"]
+    elif any(k in text for k in ["宝宝", "婴童", "家庭"]):
         preferred = ["G02", "G06", "G05", "G10", "G14", "G01", "G03", "G08", "G04", "G07"]
     elif any(k in text for k in ["鞋", "随身", "救场", "湿巾"]):
         preferred = ["G12", "G07", "G08", "G01", "G10", "G11", "G03", "G13", "G02", "G04"]
     elif any(k in text for k in ["香", "留香", "气味"]):
         preferred = ["G04", "G09", "G13", "G11", "G14", "G01", "G08", "G10", "G05", "G03"]
     return preferred[: product.desired_group_count]
+
+
+def main_point_for_group(core_points: list[SellingPoint], style_id: str, group_no: int) -> SellingPoint:
+    matching = [item for item in core_points if style_id in item.suitable_styles]
+    if matching:
+        return matching[(group_no - 1) % len(matching)]
+    return core_points[(group_no - 1) % len(core_points)]
 
 
 def format_image_note(uploaded: list[UploadedImage], manual_note: str) -> str:
@@ -355,9 +458,11 @@ def group_execution_prompt(product: ProductInput, group_no: int, style_id: str, 
 - 图上短文案方向：{' / '.join(img.copy_options)}"""
         )
     return clean_text(
-        f"""请使用我上传的产品图片作为产品主体参考，保持产品包装、LOGO、瓶型/桶型、标签、颜色、规格、可见文字一致，不要重新设计包装，不要改写品牌和包装信息。可以生成新的场景、背景、贴纸、标题和排版，但产品本身必须尽量贴近上传图片。
+        f"""【当前只执行这一组，不要生成其他组】
 
-现在请只生成“第{group_no}组”内容，不要同时生成其他组。
+请使用我上传的产品图片作为产品主体参考，保持产品包装、LOGO、瓶型/桶型、标签、颜色、规格、可见文字一致，不要重新设计包装，不要改写品牌和包装信息。
+
+现在请只生成第{group_no}组内容：
 
 本组风格：
 - 风格ID：{style_id}
@@ -365,101 +470,122 @@ def group_execution_prompt(product: ProductInput, group_no: int, style_id: str, 
 - 风格定位：{style['position']}
 
 请输出：
-1）5张独立图片
-2）1篇单独文章
-
-执行要求：
-- 图片必须是5张独立图，不要拼接成长图
-- 不要把5张图做成一张拼图
-- 文章请单独输出为文字，不要渲染到图片里
-- 不要出现平台水印、账号ID、二维码
-- 不要出现平台敏感字眼
-- 平台定位按“得物图文/社区种草图文”理解
-- 不要默认加入免责声明式表达
-- 图片之间场景、角度、内容要有差异
-- 图上短文案不要重复套话
-- 不是每组都必须包含使用步骤图，请按本组风格执行
+1. 先输出本组文章，文章是纯文本，不要放进图片里。
+2. 再生成本组5张独立图片。
+3. 每张图片独立生成，不要拼图，不要合集，不要九宫格，不要长图。
+4. 图片中只放短标题、短标签、卖点贴纸，不要放整篇文章。
+5. 本组完成后停止，不要继续下一组。
 
 产品信息：
-- 产品名称：{product.product_name}
+- 产品名：{product.product_name}
 - 品牌：{product.brand_name}
-- 品类：{product.category}
-- 使用场景：{product.usage_scene}
-- 目标人群：{product.target_user}
+- 自动识别品类：{product.category}
 - 核心卖点：{'、'.join(product.core_selling_points)}
 - 可用功效数据：{'、'.join(product.claim_data) if product.claim_data else '未提供，不要编造'}
 
-请按以下5张图分别生成：
+5张图片分别为：
 
 {chr(10).join(image_lines)}
 
-然后再单独输出一篇与本组风格一致的文章，要求：
+文章要求：
 - 像真实社区种草内容
 - 有生活感
-- 不要太广告腔
+- 不要广告腔
 - 和当前组风格匹配
 - 标题提供5个备选：{' / '.join(titles)}
 - 正文提供1篇完整内容，可参考：{body}
-- 用词自然，不要反复重复固定句式""",
+- 不要出现平台敏感字眼
+- 不要出现平台水印、账号ID、二维码""",
         product.avoid_words,
     )
 
 
-def build_group(product: ProductInput, style_id: str, group_no: int, previous_style: str | None) -> GroupOutput:
+def build_group(product: ProductInput, style_id: str, group_no: int, previous_style: str | None, core_points: list[SellingPoint]) -> GroupOutput:
     style = STYLE_LIBRARY[style_id]
     modules = style["modules"]  # type: ignore[assignment]
     images = [build_image_plan(product, style_id, module_id, idx) for idx, module_id in enumerate(modules, start=1)]
     titles = article_titles(product, style_id)
     body = build_article(product, style_id)
     tags = hashtags(product, style_id)
+    main_point = main_point_for_group(core_points, style_id, group_no)
+    cover_direction = f"{images[0].module_name}：{main_point.expression_direction}"
+    main_scene = images[0].scene
     previous = f"上一组为{previous_style}，本组切换到{style['tone']}，" if previous_style else "作为开场组，"
     difference = clean_text(f"{previous}通过模块{'、'.join(modules)}拉开首图方式、场景和文章口吻。", product.avoid_words)
     prompt = group_execution_prompt(product, group_no, style_id, images, titles, body)
-    return GroupOutput(group_no, style_id, str(style["name"]), str(style["position"]), difference, modules, images, titles, body, tags, prompt)
+    return GroupOutput(group_no, style_id, str(style["name"]), str(style["position"]), difference, main_point.name, cover_direction, main_scene, modules, images, titles, body, tags, prompt)
 
 
 def style_table(groups: list[GroupOutput]) -> str:
-    rows = ["| 组别 | 风格ID | 风格名称 | 风格定位 | 与前一组的差异点 |", "|---|---|---|---|---|"]
+    rows = ["| 组别 | 风格ID | 风格名称 | 主卖点 | 首图方向 | 主要场景 | 与上一组差异点 |", "|---|---|---|---|---|---|---|"]
     for group in groups:
-        rows.append(f"| 第{group.group_no}组 | {group.style_id} | {group.style_name} | {group.style_position} | {group.difference_anchor} |")
+        rows.append(f"| 第{group.group_no}组 | {group.style_id} | {group.style_name} | {group.main_selling_point} | {group.cover_direction} | {group.main_scene} | {group.difference_anchor} |")
     return "\n".join(rows)
 
 
-def product_summary(product: ProductInput, image_note: str) -> str:
-    return f"""- 产品名称：{product.product_name}
-- 品牌名：{product.brand_name}
-- 品类：{product.category}
-- 使用场景：{product.usage_scene}
-- 目标人群：{product.target_user}
-- 核心卖点：{'、'.join(product.core_selling_points)}
-- 可用功效数据：{'、'.join(product.claim_data) if product.claim_data else '未提供，不编造'}
-- 风险规避词：{'、'.join(product.avoid_words)}
-- 图片格式兼容说明：{image_note}"""
+def product_summary(product: ProductInput, image_note: str, has_image: bool) -> str:
+    image_status = "已上传产品图，可把可见包装信息作为参考" if has_image else "未上传产品图；后续给 ChatGPT 出图时必须上传产品图作为包装参考"
+    return f"""- 产品名：{product.product_name}
+- 品牌：{product.brand_name}
+- 自动识别品类：{product.category}
+- 推测使用场景：{product.usage_scene}
+- 推测目标人群：{product.target_user}
+- 是否上传产品图：{image_status}
+- 注意事项：{image_note}；没有明确依据的数据不写成确定功效，不重新设计包装，不改写品牌和包装信息。"""
 
 
-def build_markdown(product: ProductInput, groups: list[GroupOutput], image_note: str) -> str:
+def selling_point_table(points: list[SellingPoint]) -> str:
+    rows = ["| 卖点名称 | 用户痛点 | 内容表达方向 | 是否需要依据 | 适合风格 | 类型 |", "|---|---|---|---|---|---|"]
+    for item in points:
+        rows.append(f"| {item.name} | {item.user_pain} | {item.expression_direction} | {item.needs_evidence} | {'、'.join(item.suitable_styles)} | {item.point_type} |")
+    return "\n".join(rows)
+
+
+def core_point_list(points: list[SellingPoint], product: ProductInput) -> str:
+    lines = []
+    for index, item in enumerate(points, start=1):
+        reason = "用户主动补充，优先作为本产品表达重点" if item.name in product.core_selling_points else f"适合{product.category}，能自然落到{item.expression_direction}"
+        lines.append(f"{index}. {item.name}：{reason}。")
+    return "\n".join(lines)
+
+
+def image_prompt_text(product: ProductInput, group: GroupOutput, img: ImagePlan) -> str:
+    return clean_text(
+        f"使用用户上传产品图作为唯一产品主体参考，保持{product.brand_name} {product.product_name}的包装、LOGO、瓶型/桶型、颜色、标签、规格和可见文字一致，不重新设计包装，不改写品牌，不生成虚假规格。"
+        f"生成单张独立得物社区种草图，不拼图、不长图、不合集。主题为{img.theme}，场景为{img.scene}，构图为{img.composition}。"
+        f"产品摆放：{img.product_placement}。画面元素：{img.visual_elements}。图上只放短标题/短标签，文案方向：{' / '.join(img.copy_options)}。不要出现平台水印、账号ID、二维码。",
+        product.avoid_words,
+    )
+
+
+def build_markdown(product: ProductInput, groups: list[GroupOutput], image_note: str, selling_points: list[SellingPoint], core_points: list[SellingPoint], has_image: bool) -> str:
     parts = [
-        "# 得物多风格图文提示词生成结果",
+        "# 得物图文提示词生成结果",
         "",
-        "## A. 产品信息摘要",
-        product_summary(product, image_note),
+        "## A. 产品基础信息",
+        product_summary(product, image_note, has_image),
         "",
-        "## B. 本次选用风格列表",
+        "## B. 同品类差异化卖点库",
+        selling_point_table(selling_points),
+        "",
+        "## C. 本次筛选出的核心卖点",
+        core_point_list(core_points, product),
+        "",
+        "## D. 本次风格队列",
         style_table(groups),
         "",
-        "## C. 分组输出",
+        "## E. 分组执行包",
     ]
     for group in groups:
         parts.extend(
             [
                 "",
-                f"### 第{group.group_no}组",
-                f"1. 风格ID：{group.style_id}",
-                f"2. 风格名称：{group.style_name}",
-                f"3. 风格定位说明：{group.style_position}",
-                f"4. 本组差异锚点：{group.difference_anchor}",
-                f"5. 本组建议内容模块：{'、'.join(group.modules)}",
-                "6. 5张图片策划",
+                f"### 第{group.group_no}组｜{group.style_id} {group.style_name}",
+                "",
+                "#### 1. 本组风格定位",
+                f"{group.style_position} 本组主卖点是「{group.main_selling_point}」，与上一组差异点：{group.difference_anchor}",
+                "",
+                "#### 2. 本组5张图策划",
             ]
         )
         for img in group.images:
@@ -475,18 +601,18 @@ def build_markdown(product: ProductInput, groups: list[GroupOutput], image_note:
                     f"- 产品摆放建议：{img.product_placement}",
                     f"- 画面元素建议：{img.visual_elements}",
                     f"- 图上短文案建议：{' / '.join(img.copy_options)}",
-                    f"- 风格备注：{img.style_note}",
+                    f"- 给 ChatGPT 的图片提示词：{image_prompt_text(product, group, img)}",
                 ]
             )
         parts.extend(
             [
                 "",
-                "7. 本组文章",
+                "#### 3. 本组文章",
                 f"- 标题备选：{' / '.join(group.alt_titles)}",
                 f"- 正文：{group.article_body}",
-                f"- 关键词 / 标签建议：{' '.join('#' + tag for tag in group.hashtags)}",
+                f"- 标签建议：{' '.join('#' + tag for tag in group.hashtags)}",
                 "",
-                "8. 给 ChatGPT 的“本组执行提示词”",
+                "#### 4. 可直接复制给 ChatGPT 的本组执行提示词",
                 "```text",
                 group.execution_prompt,
                 "```",
@@ -531,18 +657,23 @@ def save_uploaded_file(uploaded_file) -> UploadedImage:
 def make_result(product: ProductInput, uploaded_images: list[UploadedImage]) -> GenerationResult:
     normalized = normalize_product(product)
     image_note = format_image_note(uploaded_images, normalized.image_format_note)
+    selling_points = build_selling_point_library(normalized)
+    core_points = select_core_selling_points(normalized, selling_points)
+    normalized.core_selling_points = [item.name for item in core_points[:8]]
     selected_ids = select_style_ids(normalized)
     groups: list[GroupOutput] = []
     previous: str | None = None
     for index, style_id in enumerate(selected_ids, start=1):
-        group = build_group(normalized, style_id, index, previous)
+        group = build_group(normalized, style_id, index, previous, core_points)
         groups.append(group)
         previous = group.style_name
-    markdown = build_markdown(normalized, groups, image_note)
+    markdown = build_markdown(normalized, groups, image_note, selling_points, core_points, bool(uploaded_images))
     return GenerationResult(
         created_at=datetime.now().isoformat(timespec="seconds"),
         uploaded_images=uploaded_images,
         product=normalized,
+        selling_point_library=selling_points,
+        core_selling_points_selected=core_points,
         selected_styles=[{"group": str(g.group_no), "style_id": g.style_id, "style_name": g.style_name, "difference": g.difference_anchor} for g in groups],
         groups=groups,
         markdown=markdown,
@@ -602,11 +733,11 @@ def page_style() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="得物多风格图文提示词生成器", page_icon="📦", layout="wide")
+    st.set_page_config(page_title="得物图文种草内容工作流生成器", page_icon="📦", layout="wide")
     page_style()
-    st.title("得物多风格图文提示词生成器")
-    st.caption("根据产品图与少量产品信息，输出可复制给 ChatGPT 的多风格图文生成指令包。")
-    st.markdown('<div class="notice">每组 = 5张独立图片 + 1篇文章。真正执行时建议一组一组复制给 ChatGPT，不要一次并发生成全部组。</div>', unsafe_allow_html=True)
+    st.title("得物图文种草内容工作流生成器")
+    st.caption("只填产品名和品牌名，也能自动识别品类、生成同品类卖点，并输出可复制给 ChatGPT 的执行包。")
+    st.markdown('<div class="notice">必填只有产品名和品牌名。每组 = 5张独立图片 + 1篇文章；真正执行时建议一组一组复制给 ChatGPT。</div>', unsafe_allow_html=True)
 
     with st.sidebar:
         st.header("产品图")
@@ -622,7 +753,7 @@ def main() -> None:
                 else:
                     st.warning(f"{file.name}：{info.message}")
         else:
-            st.info("产品图只用于本地预览。最终请把产品图和本工具输出一起发给 ChatGPT。")
+            st.info("没有产品图也可以先生成执行包；后续给 ChatGPT 出图时，需要上传产品图作为包装参考。")
 
         st.divider()
         st.header("风格控制")
@@ -640,12 +771,12 @@ def main() -> None:
             target_user = st.text_input("target_user 目标人群（选填）")
             platform_name = st.text_input("platform_name", value="得物")
         with col2:
-            core_selling_points = st.text_area("core_selling_points 核心卖点（1-5条，每行一条）", height=120)
+            core_selling_points = st.text_area("core_selling_points 核心卖点（选填，每行一条；不填会自动生成）", height=120)
             claim_data = st.text_area("claim_data 可使用功效数据（选填，每行一条）", height=90)
             avoid_words = st.text_area("avoid_words 需规避词（选填，每行一条）", value="\n".join(DEFAULT_FORBIDDEN_WORDS), height=90)
             image_format_note = st.text_area("image_format_note 图片格式说明（选填）", height=70)
         extra_notes = st.text_area("extra_notes 补充要求（选填）", height=80)
-        submitted = st.form_submit_button("生成最终版多风格指令包", use_container_width=True)
+        submitted = st.form_submit_button("生成得物图文执行包", use_container_width=True)
         clear = st.form_submit_button("清空结果")
 
     if clear:
@@ -669,8 +800,8 @@ def main() -> None:
             platform_name=platform_name,
             image_format_note=image_format_note,
         )
-        if not product.product_name or not product.brand_name or not product.core_selling_points:
-            st.error("请填写产品名称、品牌名和至少1条核心卖点。")
+        if not product.product_name or not product.brand_name:
+            st.error("请填写产品名称和品牌名。核心卖点可以不填，系统会自动生成。")
         elif style_mode in ["single", "multiple"] and not selected_style_ids:
             st.error("当前风格模式需要选择至少一个风格ID。")
         else:
@@ -687,8 +818,8 @@ def main() -> None:
         json_text = json.dumps(asdict(result), ensure_ascii=False, indent=2)
         c1, c2, c3 = st.columns(3)
         c1.metric("风格组", len(result.groups))
-        c2.metric("图片策划", len(result.groups) * 5)
-        c3.metric("文章", len(result.groups))
+        c2.metric("自动卖点", len(result.selling_point_library))
+        c3.metric("图片策划", len(result.groups) * 5)
         tabs = st.tabs(["Markdown 指令包", "JSON 备份", "逐组执行提示词"])
         with tabs[0]:
             copy_button(result.markdown, "一键复制 Markdown")
