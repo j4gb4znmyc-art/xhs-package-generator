@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+uploads/*
+!uploads/.gitkeep
+output/*
+!output/.gitkeep
+
+build/
+dist/
+*.spec.bak
