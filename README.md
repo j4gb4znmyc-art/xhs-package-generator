@@ -1,18 +1,23 @@
-# 小红书爆文图文执行包生成器
+# 得物图文风格执行包生成器
 
-这是一个本地可运行的 Streamlit 工具，用来根据产品图片和产品资料生成「复制给 ChatGPT 的执行包」。
+这是一个本地可运行、也可部署到 Streamlit Cloud 的图文执行包生成工具。
 
-它不会生成图片，不接入 OpenAI API，不接入任何 IMAGE_API_ENDPOINT，也不会调用任何 AI 图片接口。上传的产品图片只用于本地预览，并提醒你后续需要把产品图一起上传给 ChatGPT。
+工具目标不是直接生成图片，也不接入 OpenAI API 或图片生成接口。它会根据用户上传的产品图和补充资料，生成一份可以复制给 ChatGPT 的「得物图文执行包」。用户把执行包和产品图一起发给 ChatGPT 后，可让 ChatGPT 按不同风格输出图文内容。
 
-## 功能
+## 核心功能
 
-- 上传多张 `jpg/png/webp` 产品图并本地预览
-- 填写产品名称、品牌、品类、使用场景、痛点、卖点、功效数据等资料
-- 自动整理痛点和卖点
-- 自动套用洗衣凝珠类产品的使用步骤
-- 生成 Markdown 格式的 ChatGPT 可执行指令包
-- 额外输出文章单独复制版、5 张图逐张复制版、JSON 备份版
-- 支持下载 Markdown 和 JSON
+- 上传 `jpg/jpeg/png/webp/heic/heif` 产品图
+- 自动保存原图到 `uploads/`
+- 自动校正图片方向
+- HEIC/HEIF 转 JPG，转换后保存到 `uploads/converted/`
+- 图片预览
+- 填写产品名称、品牌、品类、卖点、目标人群、使用场景、检测/专利/认证信息
+- 内置 14 组得物图文风格库
+- 自动匹配默认 10 组不同风格
+- 每组生成 1 篇种草文章和 5 张独立图片提示词
+- 输出用户摘要、ChatGPT 执行包、JSON 备份
+- 支持复制、导出 Markdown、导出 JSON
+- 本地保存最近一次结果到 `output/latest_dewu_package.json`
 
 ## 本地运行
 
@@ -23,69 +28,56 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-运行后浏览器会打开本地地址，例如：
+运行后打开：
 
 ```text
 http://localhost:8501
 ```
 
-## 封装成 Windows exe
+## HEIC/HEIF 支持
 
-`.exe` 必须在 Windows 电脑上打包。把整个项目文件夹复制到 Windows 后，双击运行：
+项目通过 `pillow-heif` 支持 HEIC/HEIF 转 JPG。如果安装失败，工具仍可运行，但 HEIC/HEIF 会提示用户手动转换为 JPG 后再上传。
 
-```text
-build_windows.bat
-```
-
-打包完成后会生成：
-
-```text
-dist\XHS_Package_Generator.exe
-```
-
-把这个 exe 发给别人即可。对方双击后会自动启动本地服务，并打开浏览器页面。
-
-注意：
-
-- exe 启动后，本质上仍是在对方电脑本地运行 Streamlit。
-- 上传图片和导出的 Markdown/JSON 会保存在 exe 同目录下的 `uploads/` 和 `output/`。
-- 如果 Windows 弹出防火墙提示，选择允许本机访问即可。默认只监听 `127.0.0.1`，不会主动对公网开放。
-
-## 封装成当前 Mac 可执行文件
-
-如果是在 macOS 上想生成当前系统可运行的文件，可以执行：
+手动安装：
 
 ```bash
-chmod +x build_macos.sh
-./build_macos.sh
+pip install pillow-heif
 ```
 
-生成文件在：
+## 部署到 Streamlit Cloud
+
+仓库根目录需要包含：
 
 ```text
-dist/XHS_Package_Generator
+app.py
+requirements.txt
+README.md
 ```
 
-## 使用方式
+Streamlit Cloud 部署参数：
 
-1. 上传产品图片。
-2. 填写产品资料。
-3. 点击「生成 ChatGPT 执行包」。
-4. 下载或复制 Markdown 执行包。
-5. 把执行包和产品图片一起发送给 ChatGPT。
+```text
+Branch: main
+Main file path: app.py
+```
+
+只要继续推送到同一个 GitHub 仓库，Streamlit Cloud 会自动更新，公网网址保持不变。
 
 ## 项目结构
 
 ```text
 .
 ├── app.py
-├── launcher.py
 ├── requirements.txt
-├── requirements-build.txt
-├── xhs_package_generator.spec
-├── build_windows.bat
-├── build_macos.sh
 ├── README.md
 ├── uploads/
+│   └── converted/
 └── output/
 ```
+
+## 合规说明
+
+- 本工具不读取图片中文字，不做 AI 识别。
+- 用户未填写、图片不可确认的信息，会写为“图片不可确认”。
+- 检测、专利、认证、功效数据只使用用户明确输入的信息。
+- 输出执行包会强调产品包装、LOGO、颜色、形状、规格和可见文字以用户上传图为准。
