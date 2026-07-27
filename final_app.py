@@ -22,11 +22,15 @@ for folder in (UPLOAD_DIR, OUTPUT_DIR):
 MAX_GROUPS = 10
 FORBIDDEN = ["第一", "顶级", "最强", "100%", "永久", "彻底", "无毒", "零伤害", "医学级", "医院级", "神仙产品", "闭眼入"]
 PROMPT_GUARD = (
-    "竖版4:5，单张独立出图，不要拼图、九宫格、长图或合集；真实消费者、真实家庭空间、"
-    "手机实拍感加轻度精修，自然肤质，不要网红脸、AI假脸、过度磨皮、僵硬广告姿势；"
-    "不要平台Logo、水印、价格角标、夸张促销字或传统电商海报排版；"
+    "竖版4:5；真实消费者、真实家庭空间、自然肤质，不要网红脸、AI假脸、过度磨皮、僵硬广告姿势；"
+    "不要价格角标、夸张促销字或传统电商海报排版；"
     "以上传产品图为唯一产品主体参考，严格保持包装、LOGO、品牌名、瓶型或盒型、主色、标签、"
-    "规格、比例和可见文字一致，不要重绘、变形或虚构不存在的功效。"
+    "规格、比例和可见文字一致，不要重绘或变形。"
+    "明亮、清晰、通透的真实生活场景，小红书/得物图文笔记风格，标题文案要明显、大字、有设计感，"
+    "人物自然真实，产品清晰可见，手机实拍感+轻电商精修，非模板化构图，单张独立出图，"
+    "不要拼图，不要九宫格，不要长图，不要合集，不要平台logo，不要水印，不要大促海报感，"
+    "不要详情页堆字，不要画面过暗，不要标题太小，不要改变产品包装，不要改变品牌logo，"
+    "不要虚构不存在的功效。"
 )
 
 
@@ -47,6 +51,7 @@ class Product:
 @dataclass
 class ImagePrompt:
     number: int
+    title: str
     theme: str
     purpose: str
     prompt: str
@@ -67,6 +72,7 @@ class Group:
     audience: str
     core_expression: str
     article_angle: str
+    style_card: dict[str, str]
     titles: list[str]
     article: str
     tags: list[str]
@@ -75,17 +81,30 @@ class Group:
 
 
 DIRECTIONS = [
-    ("A", "真实用户生活分享型", "从一次自然使用经历切入，强调顺手和日常融入"),
-    ("B", "痛点解决型", "从具体生活困扰切入，用克制的体验表达解决过程"),
-    ("C", "高级生活方式型", "把产品放进有审美但真实可居住的生活片段"),
-    ("D", "产品细节质感型", "从包装、形态、触感和使用细节建立选择理由"),
-    ("E", "场景沉浸体验型", "围绕一个完整使用时段展开，突出环境和感受"),
-    ("F", "家庭安心使用型", "从家庭高频使用与谨慎选择切入，不虚构安全功效"),
-    ("G", "达人测评分享型", "用选择标准、观察细节和适用人群做理性分享"),
-    ("H", "真实使用过程记录型", "按使用前、使用中、使用后的生活动作展开"),
-    ("I", "空间美学融合型", "表现产品如何自然融入收纳和居住空间"),
-    ("J", "成分/技术/检测信任型", "只引用用户提供或检测报告明确支持的信息"),
+    ("A", "真实用户体验记录型", "从连续的真实使用经历切入，强调生活动作与体感"),
+    ("B", "达人分享测评型", "用选择标准、观察细节和适用人群做理性分享"),
+    ("C", "家庭生活场景型", "从家庭高频使用与日常协作切入，克制表达安心感"),
+    ("D", "高级生活方式型", "把产品放进明亮、有审美但真实可居住的生活片段"),
+    ("E", "产品细节质感型", "从包装、形态、触感和使用细节建立选择理由"),
+    ("F", "痛点解决故事型", "围绕一个具体困扰展开完整的发现、使用与反馈过程"),
+    ("G", "使用前后变化型", "记录使用前后生活状态的变化，不夸大具体功效"),
+    ("H", "空间美学融合型", "表现产品如何自然融入收纳和居住空间"),
+    ("I", "成分/检测/信任背书型", "只引用用户提供或报告明确支持的信息"),
+    ("J", "年轻人生活方式种草型", "从通勤、租房或周末生活节奏切入"),
 ]
+
+STYLE_PRESETS = {
+    "A": {"keywords": "真实、松弛、连续记录、轻分享", "tone": "奶油白与浅木色，白天明亮柔和", "person": "同一位普通年轻女性自然出镜，保留碎发和真实肤质", "copy": "第一人称生活记录，口语自然", "layout": "手账式大标题，左上与留白区轮换，统一圆角小标签", "lens": "手机35mm生活抓拍，中近景为主，轻微颗粒"},
+    "B": {"keywords": "理性、清晰、可信、测评感", "tone": "清透白与低饱和蓝，整体高亮干净", "person": "同一位理性分享型年轻达人，半身或手部出镜", "copy": "观察式测评口吻，结论克制", "layout": "粗体无衬线大标题配细线标注，统一信息层级", "lens": "手机50mm平视与细节近景，画面稳定清楚"},
+    "C": {"keywords": "温暖、家庭、日常、安心", "tone": "暖白、浅米与柔和浅橙，明亮不泛黄", "person": "同一位家庭用户，以背影、侧脸和手部连续出镜", "copy": "家庭日常叙事，温和但不做功效承诺", "layout": "暖色标题块与手写感短注释，版式统一留白", "lens": "自然平视中景，偶尔肩后视角，家庭纪实感"},
+    "D": {"keywords": "通透、克制、高级、生活方式", "tone": "象牙白、浅灰与少量品牌色，明亮通透", "person": "同一位穿着简洁的年轻用户，局部或侧身出镜", "copy": "克制的生活方式表达，短句有呼吸感", "layout": "杂志感大标题与大留白，统一细字辅助线", "lens": "明亮窗边光，35mm环境人像与静物近景"},
+    "E": {"keywords": "细节、材质、真实、精致", "tone": "高亮中性色与产品品牌色，细节清晰", "person": "统一以同一双自然手部出镜，人物不露脸", "copy": "从可见细节讲选择理由，避免空泛形容", "layout": "大标题与局部放大标注统一组合，不堆参数", "lens": "50mm与微距细节镜头，浅景深但产品文字清楚"},
+    "F": {"keywords": "共鸣、过程、解决、真实故事", "tone": "明亮白、浅黄色点缀与自然生活色", "person": "同一位普通租房青年连续出镜，动作自然不看镜头", "copy": "痛点开场、过程展开、体验收尾的故事口吻", "layout": "醒目问题式大标题，统一黄色强调词与箭头元素", "lens": "第一人称和侧后方抓拍结合，保持同一手机镜头质感"},
+    "G": {"keywords": "变化、过程、证据、克制", "tone": "清爽白与浅绿色，前后画面均保持明亮", "person": "同一位真实用户以手部和局部动作出镜", "copy": "记录状态变化，不夸大结果，不虚构数据", "layout": "统一时间标记与大标题，不使用拼图式前后对比", "lens": "固定35mm观察视角，用独立单图串联前后过程"},
+    "H": {"keywords": "空间、收纳、秩序、治愈", "tone": "暖白、浅木与鼠尾草绿，明亮自然", "person": "统一无正脸，以同一人的手部或背影偶尔出现", "copy": "空间整理与生活秩序感表达", "layout": "标题沿空间留白放置，统一细框与小圆点装饰", "lens": "24-35mm环境广角，保持空间线条与自然透视"},
+    "I": {"keywords": "可信、清晰、理性、依据充分", "tone": "亮白、浅蓝与少量品牌色，干净专业但不冰冷", "person": "同一位理性用户以手部和阅读资料的局部出镜", "copy": "只写已提供依据，区分事实与个人感受", "layout": "高可读大标题配极少量依据短句，统一卡片式信息区", "lens": "50mm平视、包装细节和资料局部，所有画面明亮清楚"},
+    "J": {"keywords": "年轻、轻快、通勤、租房生活", "tone": "亮白、清新蓝紫与自然品牌色，轻快通透", "person": "同一位年轻通勤或租房用户自然连续出镜", "copy": "轻快口语和真实场景分享，不使用夸张网络词", "layout": "大字标题配贴纸感短标签，统一字体与色彩系统", "lens": "手机广角抓拍与第一人称视角，轻微运动感"},
+}
 
 PROFILES = {
     "laundry": {
@@ -172,7 +191,7 @@ def profile_key(product: Product) -> str:
 
 
 def product_id(product: Product, image_bytes: list[bytes]) -> str:
-    base = f"{product.brand}|{product.name}|{product.spec}".encode()
+    base = f"v4|{product.brand}|{product.name}|{product.spec}".encode()
     return hashlib.sha256(base + b"".join(image_bytes)).hexdigest()[:16]
 
 
@@ -244,13 +263,33 @@ def make_article(product: Product, profile: dict, direction: tuple[str, str, str
     article = clean(
         f"最近因为{profile['pain']}，开始认真留意{product.category}。我把{product.name}放在{scene}使用，"
         f"这次更想从“{direction[1]}”的角度聊聊。它给我的直观感受不是需要专门学习的工具，而是能顺着原来的生活动作自然用起来。"
-        f"{detail}这些真实细节放在一起，使用时不会有很强的广告感。我比较喜欢的一点是{point}。"
-        f"{('规格是' + product.spec + '，') if product.spec else ''}对日常收纳和拿取也比较友好。{claim_sentence}"
+        f"实际用的时候，我通常会先把需要处理的东西整理好，再顺手拿它完成对应步骤。整个过程没有刻意摆拍的感觉，"
+        f"{detail}这些真实细节反而更能说明它在日常里的位置。我比较喜欢的一点是{point}。"
+        f"{('规格是' + product.spec + '，') if product.spec else ''}放在常用区域不会显得突兀，拿取和收纳也比较顺手。{claim_sentence}"
+        f"当然，它不是靠一句夸张口号就能说明白的产品。对我来说，更重要的是实际场景匹不匹配、操作是否顺手、"
+        f"包装信息是否清楚，以及用完之后愿不愿意继续把它留在常备区。这些细节比生硬的参数堆砌更有参考价值。"
         f"如果你也是{profile['users']}，又在意使用过程是否省心、产品能不能融入自己的空间，"
-        f"可以把它放进备选清单，再结合自己的需求和包装说明判断。"
+        f"可以把它放进备选清单，再结合自己的使用频率、实际需求和包装说明判断，不必只看宣传语。"
     )
     tags = [product.brand, product.name, product.category, "得物好物分享", "真实使用感", "生活好物", "居家日常", "使用体验"]
     return titles, article, [re.sub(r"\s+", "", x) for x in tags if x not in ["品牌待确认", "待识别产品"]][:10]
+
+
+def headline_for(direction_id: str, index: int, point: str) -> str:
+    banks = {
+        "A": ["最近真的常用它", "顺手这件事很重要", "我的日常使用记录", "细节比口号更真实", "慢慢成了常备款", "放进生活刚刚好", "用过才懂的顺手感", "这次认真聊聊它"],
+        "B": ["我会重点看这几点", "真实测评不说空话", "细节决定使用感", "适合谁一次说清", "我的选择理由", "用法和体验都看了", "买前可以先看这里", "理性分享这次体验"],
+        "C": ["家里常用更要顺手", "日常的小事也重要", "一家人的生活细节", "放在常用区很合适", "家务也可以轻松点", "每天用才更有感", "家庭常备看这些", "温柔融入日常"],
+        "D": ["生活质感藏在细节", "明亮日常里的好物", "克制但很有存在感", "放进空间刚刚好", "舒服生活不必用力", "喜欢这种清透感", "日常也可以有审美", "简单一点反而耐看"],
+        "E": ["近看更懂它的细节", "包装和使用都看清", "真实材质很加分", "手里拿着更直观", "这些细节值得看", "质感不是靠滤镜", "把使用细节放大", "选择理由藏在这里"],
+        "F": ["这个困扰我太懂了", "终于少折腾一点", "从麻烦到顺手", "我的真实解决过程", "日常痛点这样处理", "这次确实轻松些", "不用再手忙脚乱", "一个细节改变流程"],
+        "G": ["先记录使用前状态", "过程比结果更真实", "使用中的自然变化", "完成后的生活状态", "不夸张只做记录", "连续使用更有参考", "前后感受慢慢看", "这次变化说清楚"],
+        "H": ["收纳顺了生活也顺", "产品自然融进空间", "这个角落舒服多了", "明亮空间里的常备", "秩序感来自小细节", "放对位置真的重要", "空间留白刚刚好", "日常收纳也很治愈"],
+        "I": ["依据清楚才更安心", "只说资料支持的点", "包装信息认真看", "理性选择不夸张", "事实和感受分开说", "看懂再决定更稳妥", "信任来自清楚表达", "这次把依据讲明白"],
+        "J": ["年轻人的顺手日常", "租房生活也要舒服", "通勤前顺手用一下", "小空间里的实用派", "周末生活轻松一点", "日常好物不必夸张", "放进包里也不占地", "轻快生活从细节开始"],
+    }
+    title = banks[direction_id][index % len(banks[direction_id])]
+    return clean(title if title else point[:14])
 
 
 def make_group(product: Product, prior: list[dict]) -> Group:
@@ -263,57 +302,122 @@ def make_group(product: Product, prior: list[dict]) -> Group:
     used_shots = {v for x in prior for v in x.get("shots", [])}
     used_points = {v for x in prior for v in x.get("selling_points", [])}
     direction = choose_direction(product, used_directions, group_no)
+    preset = STYLE_PRESETS[direction[0]]
     points = selling_point_pool(product)
     main_point = next((x for x in points if x not in used_points), points[group_no % len(points)])
-    theme = clean(f"{direction[1]}｜{product.name}在{profile['scenes'][(group_no * 2) % len(profile['scenes'])]}的真实体验")
+    scene_start = (group_no * 3) % len(profile["scenes"])
+    scene_range = [profile["scenes"][(scene_start + offset) % len(profile["scenes"])] for offset in range(3)]
+    theme = clean(f"{direction[1]}｜{product.name}在{scene_range[0]}的连续真实体验")
+    style_card = {
+        "theme": theme,
+        "direction": direction[1],
+        "core_expression": f"{direction[2]}，主讲“{main_point}”",
+        "keywords": preset["keywords"],
+        "tone": preset["tone"],
+        "scene_range": "、".join(scene_range),
+        "person_rule": preset["person"],
+        "copy_tone": preset["copy"],
+        "layout": preset["layout"],
+        "lens": preset["lens"],
+    }
     titles, article, tags = make_article(product, profile, direction, main_point, group_no)
     prompts: list[ImagePrompt] = []
     purposes = ["建立真实分享信任", "呈现具体生活痛点", "记录自然使用动作", "放大产品细节质感", "展示空间融合感", "表达使用后的生活状态", "提供理性选择理由", "形成克制的收尾推荐"]
-    scene_options = [f"{scene}，{moment}" for scene in profile["scenes"] for moment in TIME_VARIANTS]
+    scene_options = [f"{scene}，{moment}" for scene in scene_range for moment in TIME_VARIANTS[:3]]
     action_options = [f"{action}，{variant}" for action in profile["actions"] for variant in ACTION_VARIANTS]
-    shot_options = [f"{shot}，{variant}" for shot in SHOTS for variant in SHOT_VARIANTS]
-    person_options = [f"{person}，{variant}" for person in PERSONS for variant in ACTION_VARIANTS]
+    shot_options = [f"{preset['lens']}；{variant}" for variant in SHOT_VARIANTS]
+    person_rule = preset["person"]
     for i in range(image_count(product)):
         scene = pick_unused(scene_options, used_scenes | {x.scene for x in prompts}, group_no * 7 + i)
         action = pick_unused(action_options, used_actions | {x.action for x in prompts}, group_no * 9 + i)
         shot = pick_unused(shot_options, used_shots | {x.shot for x in prompts}, group_no * 11 + i)
-        person = pick_unused(person_options, used_persons | {x.person for x in prompts}, group_no * 13 + i)
+        person = person_rule
         point = next((x for x in points if x not in used_points and x not in {p.selling_point for p in prompts}), main_point)
         detail = profile["details"][(group_no + i) % len(profile["details"])]
+        image_title = headline_for(direction[0], i, point)
+        title_position = ["左上留白区", "右上留白区", "画面中部自然留白", "下方三分之一留白区"][i % 4]
         prompt = clean(
-            f"生成一张{product.brand} {product.name}的得物种草内容图片。本图主题是“{direction[1]}中的{point}”。"
+            f"生成{product.brand} {product.name}同一组系列笔记中的第{i + 1}张图片。本组统一视觉设定："
+            f"{preset['keywords']}；主色调与明暗为{preset['tone']}；人物规则为{person_rule}；"
+            f"统一文案调性为{preset['copy']}；统一排版语言为{preset['layout']}；统一镜头语言为{preset['lens']}。"
+            f"本图主题是“{direction[1]}中的{point}”。"
             f"画面主体为{person}，正在{action}；产品以自然手持、正在使用或顺手摆放的方式清晰出现，不能悬浮。"
             f"场景设在{scene}，保留{detail}，像真实有人居住和使用的家庭空间，整洁但不做样板间。"
-            f"使用自然窗光、柔和室内环境光或符合场景的家居灯光，保留自然阴影、轻微反光和真实材质。"
-            f"采用{shot}，形成生活博主随手记录的抓拍感，产品清楚但不压过生活状态。"
-            f"重点表达“{point}”；如需图中文字，只允许一行克制短标题，不添加未经提供的数据。{PROMPT_GUARD}"
+            f"必须使用白天自然光、窗边柔光或明亮干净的室内光，画面高亮通透，人物、产品、背景和标题都清楚，"
+            f"禁止偏黑、偏灰、脏黄或低照度。采用{shot}，延续同一位达人、同一次策划、同一本笔记的系列感。"
+            f"画面必须加入醒目主标题“{image_title}”，放在{title_position}，使用本组统一字体、字号体系和色彩，"
+            f"标题足够大、清晰可读并参与构图；辅助小字最多一行，不堆参数。重点表达“{point}”，不添加未经提供的数据。"
+            f"{PROMPT_GUARD}"
         )
-        prompts.append(ImagePrompt(i + 1, f"{point}｜{scene}", purposes[i], prompt, scene, person, action, shot, point))
+        prompts.append(ImagePrompt(i + 1, image_title, f"{point}｜{scene}", purposes[i], prompt, scene, person, action, shot, point))
     group = Group(
         group_no, datetime.now().isoformat(timespec="seconds"), theme, direction[0], direction[1], profile["users"],
-        f"用{direction[2]}，主讲“{main_point}”", direction[2], titles, article, tags, prompts, ""
+        style_card["core_expression"], direction[2], style_card, titles, article, tags, prompts, ""
     )
-    group.markdown = render_markdown(group)
+    group.markdown = render_markdown(group, product, profile, points)
     return group
 
 
-def render_markdown(group: Group) -> str:
+def render_markdown(group: Group, product: Product, profile: dict, points: list[str]) -> str:
+    card = group.style_card
+    diff_point = product.selling_points[0] if product.selling_points else points[0]
+    product_keywords = "明亮、真实、生活感、清晰、易融入场景"
     lines = [
-        "====================", "", f"【第{group.group_no}组内容方案】", "", f"主题：{group.theme}", "",
-        f"内容方向：{group.direction}", "", f"适合用户：{group.audience}", "", f"核心表达：{group.core_expression}", "",
-        "====================", "", "【得物文章】", "", f"标题1：{group.titles[0]}", "", f"标题2：{group.titles[1]}", "",
-        f"标题3：{group.titles[2]}", "", f"正文：\n\n{group.article}", "", f"标签：{' '.join('#' + x for x in group.tags)}", "",
-        "====================", "", "【图片提示词】", "",
+        "====================", f"【第{group.group_no}组内容方案】", "====================", "",
+        "【产品识别】",
+        f"- 产品名称：{product.name}",
+        f"- 品牌：{product.brand}",
+        f"- 品类：{product.category}",
+        f"- 产品形态：{product.form}",
+        f"- 主要使用场景：{'、'.join(profile['scenes'][:4])}",
+        f"- 目标用户：{profile['users']}",
+        f"- 产品气质关键词：{product_keywords}",
+        f"- 建议出现的真实生活空间：{'、'.join(profile['scenes'][:5])}",
+        f"- 核心卖点：{'、'.join(points[:4])}",
+        f"- 差异化卖点：{diff_point}",
+        f"- 用户痛点：{profile['pain']}",
+        f"- 内容机会点：通过真实连续使用、明亮图文设计和产品细节表达选择理由；不虚构竞品、销量或功效数据。", "",
+        "【本组风格设定卡】",
+        f"- 本组主题：{card['theme']}",
+        f"- 本组内容方向：{card['direction']}",
+        f"- 本组核心表达：{card['core_expression']}",
+        f"- 本组风格关键词：{card['keywords']}",
+        f"- 本组主色调 / 明暗倾向：{card['tone']}",
+        f"- 本组场景范围：{card['scene_range']}",
+        f"- 本组人物出镜规则：{card['person_rule']}",
+        f"- 本组文案调性：{card['copy_tone']}",
+        f"- 本组排版特点：{card['layout']}",
+        f"- 本组镜头感觉：{card['lens']}", "",
+        "====================", "【种草文章】", "====================", "",
+        f"标题1：{group.titles[0]}", f"标题2：{group.titles[1]}", f"标题3：{group.titles[2]}", "",
+        f"正文：\n\n{group.article}", "", f"标签：{' '.join('#' + x for x in group.tags)}", "",
+        "====================", "【图片方案】", "====================", "",
     ]
     for image in group.images:
-        lines.extend([f"图{image.number}：", "", f"主题：{image.theme}", "", f"图片目的：{image.purpose}", "", f"生图提示词：\n\n{image.prompt}", ""])
-    lines.append("====================")
+        lines.extend([
+            f"图{image.number}：", f"图片主题：{image.theme}", f"图片作用：{image.purpose}",
+            f"画面主标题：{image.title}", f"图片提示词：\n\n{image.prompt}", "",
+        ])
     return "\n".join(lines)
 
 
 def hydrate_group(data: dict) -> Group:
     values = dict(data)
-    values["images"] = [ImagePrompt(**x) if isinstance(x, dict) else x for x in values.get("images", [])]
+    images = []
+    for item in values.get("images", []):
+        if not isinstance(item, dict):
+            images.append(item)
+            continue
+        row = dict(item)
+        row.setdefault("title", row.get("theme", "真实使用记录")[:14])
+        images.append(ImagePrompt(**row))
+    values["images"] = images
+    values.setdefault("style_card", {
+        "theme": values.get("theme", ""), "direction": values.get("direction", ""),
+        "core_expression": values.get("core_expression", ""), "keywords": "真实、明亮、生活感",
+        "tone": "明亮通透", "scene_range": "", "person_rule": "真实用户自然出镜",
+        "copy_tone": "自然分享", "layout": "大标题图文设计", "lens": "手机生活抓拍",
+    })
     return Group(**values)
 
 
@@ -332,7 +436,10 @@ def persist_group(key: str, group: Group, history: dict[str, list[dict]]) -> Non
         "direction_id": group.direction_id, "direction": group.direction, "article_angle": group.article_angle,
         "scenes": [x.scene for x in group.images], "persons": [x.person for x in group.images],
         "actions": [x.action for x in group.images], "shots": [x.shot for x in group.images],
-        "selling_points": [x.selling_point for x in group.images], "group": asdict(group),
+        "selling_points": [x.selling_point for x in group.images],
+        "color_tone": group.style_card["tone"], "layout": group.style_card["layout"],
+        "copy_tone": group.style_card["copy_tone"], "image_structure": group.style_card["lens"],
+        "group": asdict(group),
     }
     history.setdefault(key, []).append(record)
     save_history(history)
@@ -340,25 +447,26 @@ def persist_group(key: str, group: Group, history: dict[str, list[dict]]) -> Non
 
 
 def main() -> None:
-    st.set_page_config(page_title="得物种草内容生成器", page_icon="🟣", layout="wide")
+    st.set_page_config(page_title="得物种草图文生成器 V4", page_icon="🟣", layout="wide")
     st.markdown(
         """<style>.block-container{max-width:1180px;padding-top:2rem}.stTextInput input,.stTextArea textarea{border-radius:10px}
         .hero{padding:22px;border:1px solid #e5e7eb;border-radius:16px;background:linear-gradient(135deg,#faf5ff,#fff)}</style>""",
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="hero"><h1>得物种草内容生成器</h1><p>一次生成1组，连续生成最多10组差异化图文内容。每组包含1篇文章与5–8张独立生图提示词。</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><h1>得物种草图文生成器 V4</h1><p>单组生成｜组内统一｜组间差异｜1篇文章 + 5–8张独立生图提示词</p></div>', unsafe_allow_html=True)
     st.write("")
     with st.sidebar:
         st.header("产品资料")
         image_files = st.file_uploader("产品图片", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
         report = st.file_uploader("检测报告（可选）", type=["pdf", "jpg", "jpeg", "png"])
+        style_refs = st.file_uploader("风格参考图（可选）", type=["jpg", "jpeg", "png", "webp"], accept_multiple_files=True)
         if image_files:
             for file in image_files:
                 try:
                     st.image(ImageOps.exif_transpose(Image.open(file)), caption=file.name, use_container_width=True)
                 except Exception:
                     st.caption(file.name)
-        st.info("检测报告不会自动变成功效结论。请在右侧“报告支持点”填写确认可用的内容。")
+        st.info("检测报告不会自动变成功效结论，请填写确认可用的支持点。风格参考图会随产品保存；如需精确提取某项风格，请在补充要求中说明。")
     with st.form("product_form"):
         c1, c2 = st.columns(2)
         with c1:
@@ -370,7 +478,7 @@ def main() -> None:
         with c2:
             selling = st.text_area("产品卖点（可选，每行一条）", height=120)
             claims = st.text_area("检测报告/包装明确支持点（可选，每行一条）", height=120)
-            extra = st.text_area("补充要求（可选）", height=80)
+            extra = st.text_area("补充要求 / 参考图风格说明（可选）", height=80)
         submit = st.form_submit_button("生成本产品第1组 / 查看当前进度", use_container_width=True)
     if submit:
         product = infer_product(Product(
@@ -380,6 +488,8 @@ def main() -> None:
         image_bytes = [save_upload(f) for f in image_files or []]
         if report:
             save_upload(report)
+        for reference in style_refs or []:
+            image_bytes.append(save_upload(reference))
         key = product_id(product, image_bytes)
         st.session_state["product"] = product
         st.session_state["product_key"] = key
@@ -408,9 +518,17 @@ def main() -> None:
         st.markdown(
             f"- 产品名称：{product.name}\n- 品牌：{product.brand}\n- 品类：{product.category}\n- 产品形态：{product.form}\n"
             f"- 主要使用场景：{'、'.join(profile['scenes'][:4])}\n- 目标消费者：{profile['users']}\n"
-            f"- 核心卖点：{'、'.join(points[:4])}\n- 用户痛点：{profile['pain']}\n"
-            f"- 内容机会：用真实生活动作、不同空间和不同镜头表达，避免重复海报模板。"
+            f"- 产品气质：明亮、真实、生活感、清晰、易融入场景\n"
+            f"- 核心卖点：{'、'.join(points[:4])}\n- 差异化卖点：{product.selling_points[0] if product.selling_points else points[0]}\n"
+            f"- 用户痛点：{profile['pain']}\n- 内容机会：用连续生活叙事、明显大标题和统一视觉体系表达，避免重复海报模板。"
         )
+        with st.expander("查看本组风格设定卡", expanded=True):
+            card = current.style_card
+            st.markdown(
+                f"- 主题：{card['theme']}\n- 内容方向：{card['direction']}\n- 核心表达：{card['core_expression']}\n"
+                f"- 风格关键词：{card['keywords']}\n- 主色调 / 明暗：{card['tone']}\n- 场景范围：{card['scene_range']}\n"
+                f"- 人物规则：{card['person_rule']}\n- 文案调性：{card['copy_tone']}\n- 排版：{card['layout']}\n- 镜头：{card['lens']}"
+            )
         b1, b2, b3 = st.columns(3)
         if b1.button("生成下一组", type="primary", use_container_width=True, disabled=len(prior) >= MAX_GROUPS):
             group = make_group(product, prior)
