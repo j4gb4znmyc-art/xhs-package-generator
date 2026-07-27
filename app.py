@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from final_app import main as final_main
+
+final_main()
+raise SystemExit
+
 import hashlib
 import json
 import os
